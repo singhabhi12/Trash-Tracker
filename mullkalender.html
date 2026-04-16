@@ -288,6 +288,16 @@
     padding: 2px 7px; border-radius: 20px; border: 1px solid #bfdbfe; letter-spacing: 0.3px;
   }
 
+  /* === CONTACTS LIST === */
+  .contact-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 14px; border-bottom: 1px solid var(--border); gap: 12px;
+  }
+  .contact-item:last-child { border-bottom: none; }
+  .contact-info { flex: 1; min-width: 0; }
+  .contact-info .c-phone { font-weight: 700; font-size: 0.88rem; }
+  .contact-info .c-next { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+
   /* === WHATSAPP AUTO-REMINDERS === */
   .wa-active-box {
     background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px;
@@ -507,6 +517,18 @@
         Send <strong>join slip-him</strong> to <strong>+1 415 523 8886</strong> on WhatsApp once to opt in. This activates your number for receiving reminders.
       </div>
     </div>
+    <div class="form-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div class="section-title">👥 Registered Contacts</div>
+        <button class="btn btn-white btn-sm" style="border:1.5px solid var(--border);" onclick="loadContacts()">🔄 Refresh</button>
+      </div>
+      <div id="contacts-list" style="border-radius:10px;border:1.5px solid var(--border);overflow:hidden;">
+        <div style="padding:20px;font-size:0.82rem;color:var(--muted);text-align:center;">
+          Tap Refresh to see registered contacts.
+        </div>
+      </div>
+    </div>
+
   </div>
 
 </main>
@@ -838,6 +860,66 @@ function sendWhatsApp(mode) {
   const encoded = encodeURIComponent(msg);
   const url = waNum ? `https://wa.me/${waNum}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
   window.open(url, '_blank');
+}
+
+// ===== CONTACTS =====
+async function loadContacts() {
+  const list = document.getElementById('contacts-list');
+  list.innerHTML = '<div style="padding:16px;font-size:0.82rem;color:var(--muted);display:flex;gap:8px;align-items:center;"><span class="spinner"></span> Loading…</div>';
+  try {
+    const resp = await fetch('/api/contacts');
+    let json;
+    try { json = await resp.json(); } catch { throw new Error('Server error'); }
+    if (!resp.ok) throw new Error(json.error || 'Failed to load');
+
+    const { contacts } = json;
+    if (!contacts.length) {
+      list.innerHTML = '<div style="padding:20px;font-size:0.82rem;color:var(--muted);text-align:center;">No registered contacts yet.</div>';
+      return;
+    }
+    list.innerHTML = '';
+    contacts.forEach(c => {
+      const cfg = c.nextType ? BIN_CONFIG[c.nextType] : null;
+      const nextLabel = c.nextDate
+        ? `${c.nextDate}${cfg ? ' · ' + cfg.icon + ' ' + cfg.label : ''}`
+        : 'No upcoming dates';
+      const id = 'c-' + c.phone.replace(/\D/g, '');
+      const item = document.createElement('div');
+      item.className = 'contact-item';
+      item.id = id;
+      item.innerHTML = `
+        <div class="contact-info">
+          <div class="c-phone">${c.masked}</div>
+          <div class="c-next">${nextLabel}</div>
+        </div>
+        <button class="btn btn-green btn-sm" onclick="sendManualReminder('${c.phone}', this)">📲 Remind</button>`;
+      list.appendChild(item);
+    });
+  } catch (err) {
+    list.innerHTML = `<div style="padding:16px;font-size:0.82rem;color:#ef4444;">✕ ${err.message}</div>`;
+  }
+}
+
+async function sendManualReminder(phone, btn) {
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    const resp = await fetch('/api/send-reminder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone }),
+    });
+    let json;
+    try { json = await resp.json(); } catch { throw new Error('Server error'); }
+    if (!resp.ok) throw new Error(json.error);
+    btn.innerHTML = '✅ Sent!';
+    btn.style.background = '#16a34a';
+  } catch (err) {
+    btn.innerHTML = '✕ Failed';
+    btn.style.background = '#ef4444';
+  }
+  setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; btn.disabled = false; }, 2500);
 }
 
 // ===== WHATSAPP AUTO-REMINDERS =====
