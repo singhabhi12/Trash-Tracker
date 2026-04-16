@@ -288,6 +288,22 @@
     padding: 2px 7px; border-radius: 20px; border: 1px solid #bfdbfe; letter-spacing: 0.3px;
   }
 
+  /* === WHATSAPP AUTO-REMINDERS === */
+  .wa-active-box {
+    background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px;
+    padding: 14px 16px; margin-top: 14px; display: flex;
+    align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .wa-active-box .wa-info { flex: 1; min-width: 0; }
+  .wa-active-box .wa-info strong { font-size: 0.88rem; color: #15803d; display: block; }
+  .wa-active-box .wa-info span { font-size: 0.8rem; color: #166534; }
+  .wa-setup-note {
+    margin-top: 14px; padding: 12px 14px; background: #f8fafc;
+    border-radius: 10px; border: 1.5px solid var(--border);
+    font-size: 0.78rem; color: var(--muted); line-height: 1.6;
+  }
+  .wa-setup-note strong { color: var(--text); }
+
   /* Responsive */
   @media (max-width: 600px) {
     header { flex-direction: column; align-items: flex-start; gap: 10px; }
@@ -458,17 +474,38 @@
     </div>
 
     <div class="form-card">
-      <div class="section-title" style="margin-bottom:6px">WhatsApp Reminder Number</div>
-      <p class="hint" style="margin-bottom:12px">Phone number of family member or WhatsApp group (with country code, e.g. +49...)</p>
-      <div class="form-row">
+      <div class="section-title" style="margin-bottom:6px;">📱 Auto WhatsApp Reminders</div>
+      <p class="hint" style="margin-bottom:14px;">Enter your WhatsApp number to receive an automatic reminder message the evening before each collection day.</p>
+
+      <div class="form-row" style="align-items:flex-end;">
+        <div class="form-group" style="flex:1;min-width:200px;">
+          <label>WhatsApp Number</label>
+          <input type="tel" id="wa-number" placeholder="+49 151 12345678"
+            style="padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:0.88rem;outline:none;width:100%;transition:border-color 0.15s;"
+            oninput="saveWaNumber()" onfocus="this.style.borderColor='#25d366'" onblur="this.style.borderColor=''" />
+        </div>
         <div class="form-group">
-          <label>Phone Number</label>
-          <input type="text" id="wa-number" placeholder="+49 151 12345678"
-            style="padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:0.88rem; outline:none; min-width:220px;"
-            oninput="saveWaNumber()" />
+          <button class="btn btn-green" onclick="registerWhatsApp()">✅ Activate</button>
         </div>
       </div>
-      <p class="hint">Tip: For family groups, use the WhatsApp group link and click the "WhatsApp" button at the top right.</p>
+
+      <div id="wa-status" style="margin-top:10px;font-size:0.82rem;font-weight:600;min-height:22px;display:flex;align-items:center;gap:7px;"></div>
+
+      <div id="wa-active-box" class="wa-active-box" style="display:none;">
+        <div class="wa-info">
+          <strong>✅ Reminders active</strong>
+          <span id="wa-active-phone"></span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-white btn-sm" style="border:1.5px solid var(--border);" onclick="syncWhatsAppDates()">🔄 Sync dates</button>
+          <button class="btn btn-danger btn-sm" onclick="unregisterWhatsApp()">Unsubscribe</button>
+        </div>
+      </div>
+
+      <div class="wa-setup-note">
+        <strong>ℹ️ First-time Twilio Sandbox setup:</strong><br>
+        Send <strong>join &lt;your-sandbox-word&gt;</strong> to <strong>+1 415 523 8886</strong> on WhatsApp once to opt in. Your sandbox word is shown in your Twilio dashboard → Messaging → Try it out → Send a WhatsApp message.
+      </div>
     </div>
   </div>
 
@@ -526,6 +563,7 @@ window.addEventListener('load', () => {
   preloadPinneberg();
   render();
   scheduleNotifications();
+  checkWaRegistration();
 });
 
 function render() {
@@ -800,6 +838,91 @@ function sendWhatsApp(mode) {
   const encoded = encodeURIComponent(msg);
   const url = waNum ? `https://wa.me/${waNum}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
   window.open(url, '_blank');
+}
+
+// ===== WHATSAPP AUTO-REMINDERS =====
+async function registerWhatsApp() {
+  const phone = document.getElementById('wa-number').value.trim();
+  if (!phone) { alert('Please enter your WhatsApp number.'); return; }
+  saveWaNumber();
+  const status = document.getElementById('wa-status');
+  status.innerHTML = '<span class="spinner"></span> Activating…';
+  try {
+    const resp = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, dates: loadDates() }),
+    });
+    let json;
+    try { json = await resp.json(); } catch { throw new Error(`Server error ${resp.status}`); }
+    if (!resp.ok) throw new Error(json.error || 'Registration failed');
+    const normalized = phone.replace(/[\s\-()]/g, '').replace(/^00/, '+');
+    localStorage.setItem('mullkalender_wa_active', normalized);
+    status.innerHTML = '';
+    showWaActiveState(normalized);
+  } catch (err) {
+    status.innerHTML = `<span style="color:#ef4444">✕ ${err.message}</span>`;
+  }
+}
+
+async function syncWhatsAppDates() {
+  const phone = localStorage.getItem('mullkalender_wa_active');
+  if (!phone) return;
+  const status = document.getElementById('wa-status');
+  status.innerHTML = '<span class="spinner"></span> Syncing dates…';
+  try {
+    const resp = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, dates: loadDates() }),
+    });
+    let json;
+    try { json = await resp.json(); } catch { throw new Error(`Server error ${resp.status}`); }
+    if (!resp.ok) throw new Error(json.error);
+    status.innerHTML = '<span style="color:#16a34a">✓ Dates synced!</span>';
+    setTimeout(() => { status.innerHTML = ''; }, 2500);
+  } catch (err) {
+    status.innerHTML = `<span style="color:#ef4444">✕ ${err.message}</span>`;
+  }
+}
+
+async function unregisterWhatsApp() {
+  const phone = localStorage.getItem('mullkalender_wa_active');
+  if (!phone) return;
+  if (!confirm('Unsubscribe from automatic WhatsApp reminders?')) return;
+  const status = document.getElementById('wa-status');
+  status.innerHTML = '<span class="spinner"></span> Unsubscribing…';
+  try {
+    const resp = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, action: 'unregister' }),
+    });
+    let json;
+    try { json = await resp.json(); } catch { throw new Error(`Server error ${resp.status}`); }
+    if (!resp.ok) throw new Error(json.error);
+    localStorage.removeItem('mullkalender_wa_active');
+    document.getElementById('wa-active-box').style.display = 'none';
+    document.getElementById('wa-number').value = '';
+    status.innerHTML = '<span style="color:#16a34a">✓ Unsubscribed.</span>';
+    setTimeout(() => { status.innerHTML = ''; }, 2500);
+  } catch (err) {
+    status.innerHTML = `<span style="color:#ef4444">✕ ${err.message}</span>`;
+  }
+}
+
+function showWaActiveState(phone) {
+  document.getElementById('wa-active-phone').textContent = phone;
+  document.getElementById('wa-active-box').style.display = 'flex';
+}
+
+function checkWaRegistration() {
+  const phone = localStorage.getItem('mullkalender_wa_active');
+  if (phone) {
+    document.getElementById('wa-number').value = phone;
+    saveWaNumber();
+    showWaActiveState(phone);
+  }
 }
 
 // ===== BROWSER NOTIFICATIONS =====
