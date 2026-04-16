@@ -1,0 +1,9 @@
+{
+  "name": "trash-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "openai": "^4.72.0",
+    "pdf-parse": "^1.1.1"
+  }
+}

@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Waste Calendar 🗑️</title>
+<style>
+  :root {
+    --restmuell: #6b7280;
+    --restmuell-light: #f3f4f6;
+    --bio: #a16207;
+    --bio-light: #fef9c3;
+    --gelb: #ca8a04;
+    --gelb-light: #fefce8;
+    --papier: #2563eb;
+    --papier-light: #eff6ff;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --muted: #64748b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d6a4f 100%);
+    color: white;
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  }
+
+  header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.3px; }
+  header span { font-size: 0.85rem; opacity: 0.8; margin-top: 2px; display: block; }
+
+  .header-right { display: flex; gap: 10px; align-items: center; }
+
+  .btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .btn-white { background: white; color: #1e3a5f; }
+  .btn-green { background: #25d366; color: white; }
+  .btn-primary { background: #2563eb; color: white; }
+  .btn-sm { padding: 6px 12px; font-size: 0.78rem; }
+  .btn-danger { background: #ef4444; color: white; }
+
+  main { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+
+  /* --- NEXT COLLECTIONS CARDS --- */
+  .next-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+
+  .bin-card {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 18px 16px;
+    border: 1.5px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .bin-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+
+  .bin-card .stripe {
+    position: absolute; top: 0; left: 0; right: 0; height: 5px;
+  }
+  .bin-card .bin-icon { font-size: 2rem; margin-bottom: 8px; }
+  .bin-card .bin-name { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 4px; }
+  .bin-card .days-count { font-size: 2.2rem; font-weight: 800; line-height: 1; }
+  .bin-card .days-label { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+  .bin-card .next-date { font-size: 0.8rem; font-weight: 600; margin-top: 8px; }
+
+  .urgent { background: #fff7ed !important; border-color: #fb923c !important; }
+  .urgent .days-count { color: #ea580c; }
+  .today-card { background: #f0fdf4 !important; border-color: #22c55e !important; }
+  .today-card .days-count { color: #16a34a; }
+
+  /* --- SECTION HEADERS --- */
+  .section-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px;
+  }
+  .section-title { font-size: 1rem; font-weight: 700; }
+
+  /* --- CALENDAR --- */
+  .calendar-nav {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+  }
+  .calendar-nav button {
+    background: var(--card); border: 1.5px solid var(--border);
+    border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 1rem;
+    transition: background 0.15s;
+  }
+  .calendar-nav button:hover { background: var(--border); }
+  .calendar-nav .month-label { font-size: 1.05rem; font-weight: 700; min-width: 160px; text-align: center; }
+
+  .calendar-wrap {
+    background: var(--card); border-radius: 14px; border: 1.5px solid var(--border);
+    overflow: hidden; margin-bottom: 28px;
+  }
+
+  .cal-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+  }
+
+  .cal-day-header {
+    text-align: center; padding: 10px 4px; font-size: 0.72rem;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--muted); background: var(--bg); border-bottom: 1.5px solid var(--border);
+  }
+
+  .cal-cell {
+    min-height: 72px; padding: 6px; border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border); position: relative;
+    cursor: default;
+  }
+  .cal-cell:nth-child(7n) { border-right: none; }
+  .cal-cell.empty { background: var(--bg); opacity: 0.5; }
+  .cal-cell.today { background: #eff6ff; }
+  .cal-cell.today .cal-num { background: #2563eb; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+
+  .cal-num { font-size: 0.82rem; font-weight: 600; margin-bottom: 4px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+
+  .cal-dots { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 2px; }
+  .cal-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    cursor: pointer; transition: transform 0.1s;
+  }
+  .cal-dot:hover { transform: scale(1.3); }
+
+  /* --- ADD DATES FORM --- */
+  .form-card {
+    background: var(--card); border-radius: 14px; border: 1.5px solid var(--border);
+    padding: 20px; margin-bottom: 28px;
+  }
+
+  .form-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 14px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group label { font-size: 0.78rem; font-weight: 600; color: var(--muted); }
+  .form-group select, .form-group input[type="date"] {
+    padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 8px;
+    font-size: 0.88rem; background: white; color: var(--text);
+    outline: none; transition: border-color 0.15s;
+  }
+  .form-group select:focus, .form-group input:focus { border-color: #2563eb; }
+
+  /* Bulk import */
+  .bulk-area {
+    width: 100%; padding: 10px 12px; border: 1.5px solid var(--border);
+    border-radius: 8px; font-size: 0.85rem; font-family: monospace;
+    resize: vertical; min-height: 80px; outline: none;
+    transition: border-color 0.15s;
+  }
+  .bulk-area:focus { border-color: #2563eb; }
+
+  .hint { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+
+  /* --- UPCOMING LIST --- */
+  .upcoming-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 28px; }
+  .upcoming-item {
+    background: var(--card); border-radius: 10px; border: 1.5px solid var(--border);
+    padding: 12px 16px; display: flex; align-items: center; gap: 12px;
+  }
+  .upcoming-item .dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+  .upcoming-item .info { flex: 1; }
+  .upcoming-item .info .name { font-weight: 600; font-size: 0.9rem; }
+  .upcoming-item .info .date { font-size: 0.78rem; color: var(--muted); }
+  .upcoming-item .badge {
+    font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 20px;
+    background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+  }
+  .upcoming-item .badge.soon { background: #fff7ed; border-color: #fb923c; color: #ea580c; }
+  .upcoming-item .badge.tmrw { background: #fef9c3; border-color: #ca8a04; color: #854d0e; }
+  .upcoming-item .badge.tday { background: #f0fdf4; border-color: #22c55e; color: #15803d; }
+  .upcoming-item .del-btn {
+    background: none; border: none; cursor: pointer; font-size: 1rem;
+    color: var(--muted); padding: 2px 6px; border-radius: 4px;
+  }
+  .upcoming-item .del-btn:hover { background: #fee2e2; color: #ef4444; }
+
+  /* Legend */
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+
+  /* --- NOTIFICATION BANNER --- */
+  .banner {
+    border-radius: 12px; padding: 14px 18px; margin-bottom: 20px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn { from { opacity:0; transform: translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+  .banner.tomorrow { background: #fef9c3; border: 1.5px solid #fde047; }
+  .banner.today2 { background: #dcfce7; border: 1.5px solid #86efac; }
+  .banner-text { font-size: 0.88rem; font-weight: 600; }
+  .banner-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+  /* Tab nav */
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--card); border-radius: 10px; padding: 4px; border: 1.5px solid var(--border); width: fit-content; }
+  .tab { padding: 7px 18px; border-radius: 7px; border: none; background: none; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--muted); transition: all 0.15s; }
+  .tab.active { background: #2563eb; color: white; }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Tooltip */
+  .tooltip-wrap { position: relative; display: inline-block; }
+  .tooltip { position: absolute; bottom: 120%; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; font-size: 0.72rem; padding: 4px 8px; border-radius: 6px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.15s; z-index: 10; }
+  .cal-dot:hover + .tooltip, .tooltip-wrap:hover .tooltip { opacity: 1; }
+
+  .empty-state { text-align: center; padding: 32px; color: var(--muted); font-size: 0.88rem; }
+  .empty-state .icon { font-size: 2.5rem; margin-bottom: 8px; }
+
+  /* === AI SCAN === */
+  .scan-dropzone {
+    border: 2.5px dashed var(--border);
+    border-radius: 16px;
+    padding: 44px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    background: var(--bg);
+  }
+  .scan-dropzone:hover, .scan-dropzone.dragover { border-color: #2563eb; background: #eff6ff; }
+  .scan-dropzone .dz-icon { font-size: 2.8rem; margin-bottom: 10px; }
+  .scan-dropzone .dz-title { font-size: 0.95rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .scan-dropzone .dz-sub { font-size: 0.76rem; color: var(--muted); }
+
+  .scan-file-chip {
+    align-items: center; gap: 10px;
+    background: #f0fdf4; border: 1.5px solid #86efac;
+    border-radius: 10px; padding: 10px 14px; margin-top: 12px;
+  }
+  .scan-file-chip .chip-name {
+    font-size: 0.85rem; font-weight: 600; flex: 1;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+  }
+  .scan-file-chip .chip-clear {
+    background: none; border: none; cursor: pointer; font-size: 1rem;
+    color: var(--muted); padding: 2px 4px; border-radius: 4px; flex-shrink: 0;
+  }
+  .scan-file-chip .chip-clear:hover { background: #fee2e2; color: #ef4444; }
+
+  .spinner {
+    display: inline-block; width: 17px; height: 17px;
+    border: 2.5px solid #e2e8f0; border-top-color: #2563eb;
+    border-radius: 50%; animation: spin 0.65s linear infinite; vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .preview-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  .preview-table th {
+    padding: 9px 12px; text-align: left; font-weight: 700;
+    border-bottom: 2px solid var(--border); background: var(--bg);
+    font-size: 0.73rem; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted);
+  }
+  .preview-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  .preview-table tr:last-child td { border-bottom: none; }
+  .preview-table tbody tr:hover td { background: #f8fafc; }
+
+  .type-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 2px 9px; border-radius: 20px; font-size: 0.74rem; font-weight: 700;
+  }
+  .ai-new-badge {
+    font-size: 0.68rem; font-weight: 700; background: #eff6ff; color: #2563eb;
+    padding: 2px 7px; border-radius: 20px; border: 1px solid #bfdbfe; letter-spacing: 0.3px;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    header { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .header-right { width: 100%; }
+    .cal-cell { min-height: 52px; padding: 3px; }
+    .cal-dot { width: 8px; height: 8px; }
+    .next-grid { grid-template-columns: repeat(2, 1fr); }
+    .scan-dropzone { padding: 30px 16px; }
+    .scan-dropzone .dz-icon { font-size: 2.2rem; }
+    .preview-table th:last-child, .preview-table td:last-child { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🗑️ Waste Collection Calendar</h1>
+    <span id="today-label">Collection schedule at a glance</span>
+  </div>
+  <div class="header-right">
+    <button class="btn btn-white btn-sm" onclick="requestNotifPermission()">🔔 Notifications</button>
+    <button class="btn btn-green btn-sm" onclick="sendWhatsApp()">💬 WhatsApp</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- Info banner: pre-loaded dates -->
+  <div id="preload-info" style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:0.83rem;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+    <span>📋 <strong>Abfuhrplan 2026 Pinneberg</strong> has been automatically loaded. Please quickly compare with your paper schedule and adjust if needed.</span>
+    <button onclick="document.getElementById('preload-info').remove()" style="background:none;border:none;cursor:pointer;font-size:1.1rem;color:#64748b;">✕</button>
+  </div>
+
+  <!-- Alert banners -->
+  <div id="banners"></div>
+
+  <!-- Bin summary cards -->
+  <div class="next-grid" id="bin-cards"></div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('calendar')">📅 Calendar</button>
+    <button class="tab" onclick="switchTab('schedule')">📋 Schedule</button>
+    <button class="tab" onclick="switchTab('add')">➕ Add Dates</button>
+  </div>
+
+  <!-- TAB: CALENDAR -->
+  <div class="tab-content active" id="tab-calendar">
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#6b7280"></div> General Waste</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#a16207"></div> Organic Waste</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ca8a04"></div> Yellow Bag</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2563eb"></div> Paper &amp; Card</div>
+    </div>
+    <div class="calendar-nav">
+      <button onclick="prevMonth()">‹</button>
+      <div class="month-label" id="month-label"></div>
+      <button onclick="nextMonth()">›</button>
+    </div>
+    <div class="calendar-wrap">
+      <div class="cal-grid" id="cal-headers"></div>
+      <div class="cal-grid" id="cal-body"></div>
+    </div>
+  </div>
+
+  <!-- TAB: SCHEDULE -->
+  <div class="tab-content" id="tab-schedule">
+    <div class="section-header">
+      <div class="section-title">Upcoming Collections</div>
+      <button class="btn btn-danger btn-sm" onclick="clearAll()">🗑 Clear All</button>
+    </div>
+    <div class="upcoming-list" id="upcoming-list"></div>
+  </div>
+
+  <!-- TAB: ADD -->
+  <div class="tab-content" id="tab-add">
+
+    <!-- AI Scan Card -->
+    <div class="form-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <div class="section-title">🤖 Scan Calendar with AI</div>
+        <span class="ai-new-badge">NEW</span>
+      </div>
+      <p class="hint" style="margin-bottom:16px;">Upload a photo or document of your waste collection calendar — AI reads it and extracts all dates automatically.</p>
+
+      <div class="scan-dropzone" id="scan-dropzone"
+           onclick="document.getElementById('scan-file-input').click()"
+           ondragover="onScanDragOver(event)"
+           ondragleave="onScanDragLeave()"
+           ondrop="onScanDrop(event)">
+        <div class="dz-icon">📸</div>
+        <div class="dz-title">Tap to upload or drag &amp; drop</div>
+        <div class="dz-sub">JPG · PNG · PDF · DOCX &nbsp;·&nbsp; Max 10 MB</div>
+        <input type="file" id="scan-file-input" accept=".jpg,.jpeg,.png,.pdf,.docx,image/*"
+               style="display:none" onchange="onScanFileSelected(this.files[0])">
+      </div>
+
+      <div id="scan-chip" class="scan-file-chip" style="display:none;">
+        <span>📄</span>
+        <span class="chip-name" id="scan-chip-name"></span>
+        <button class="chip-clear" onclick="clearScanFile()" title="Remove file">✕</button>
+      </div>
+
+      <div style="margin-top:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <button class="btn btn-primary" id="scan-btn" onclick="startScan()" disabled>🔍 Scan with AI</button>
+        <div id="scan-status" style="font-size:0.82rem;color:var(--muted);display:flex;align-items:center;gap:7px;"></div>
+      </div>
+
+      <div id="scan-preview" style="display:none;margin-top:22px;">
+        <div style="font-size:0.9rem;font-weight:700;margin-bottom:12px;color:var(--text);">
+          Found <span id="scan-count" style="color:#2563eb;">0</span> pickup dates — review &amp; import:
+        </div>
+        <div style="overflow-x:auto;border-radius:10px;border:1.5px solid var(--border);">
+          <table class="preview-table">
+            <thead>
+              <tr>
+                <th style="width:44px;padding-left:14px;">
+                  <input type="checkbox" id="scan-select-all" checked onchange="toggleAllScanRows(this.checked)" title="Select / deselect all">
+                </th>
+                <th>Date</th>
+                <th>Waste type</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="scan-tbody"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-primary" onclick="confirmScanImport()">✅ Import Selected</button>
+          <button class="btn btn-white" onclick="cancelScan()" style="border:1.5px solid var(--border);">Cancel</button>
+          <span id="scan-import-msg" style="font-size:0.82rem;font-weight:600;"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="section-title" style="margin-bottom:16px">Add a Single Date</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Waste Type</label>
+          <select id="add-type">
+            <option value="restmuell">General Waste (grey)</option>
+            <option value="bio">Organic Waste (brown)</option>
+            <option value="gelb">Yellow Bag / Bin</option>
+            <option value="papier">Paper &amp; Card (blue)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="add-date" />
+        </div>
+        <div class="form-group" style="justify-content: flex-end;">
+          <button class="btn btn-primary" onclick="addSingle()">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="section-title" style="margin-bottom:6px">Bulk Import Dates</div>
+      <p class="hint" style="margin-bottom:12px">Format: <code>DD.MM.YYYY type</code> — one entry per line. Types: <code>restmuell</code>, <code>bio</code>, <code>gelb</code>, <code>papier</code></p>
+      <textarea class="bulk-area" id="bulk-input" placeholder="14.01.2026 restmuell&#10;28.01.2026 bio&#10;28.01.2026 gelb&#10;05.02.2026 papier"></textarea>
+      <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="bulkImport()">📥 Import</button>
+        <button class="btn btn-white" onclick="loadSampleData()" style="border:1.5px solid var(--border)">📄 Load Sample Data</button>
+      </div>
+      <div id="import-msg" style="margin-top:10px; font-size:0.82rem; font-weight:600;"></div>
+    </div>
+
+    <div class="form-card">
+      <div class="section-title" style="margin-bottom:6px">WhatsApp Reminder Number</div>
+      <p class="hint" style="margin-bottom:12px">Phone number of family member or WhatsApp group (with country code, e.g. +49...)</p>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Phone Number</label>
+          <input type="text" id="wa-number" placeholder="+49 151 12345678"
+            style="padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:0.88rem; outline:none; min-width:220px;"
+            oninput="saveWaNumber()" />
+        </div>
+      </div>
+      <p class="hint">Tip: For family groups, use the WhatsApp group link and click the "WhatsApp" button at the top right.</p>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ===== DATA STORE =====
+const BIN_CONFIG = {
+  restmuell: { label: 'General Waste',  color: '#6b7280', icon: '🗑️', light: '#f3f4f6' },
+  bio:       { label: 'Organic Waste',  color: '#a16207', icon: '🟫', light: '#fef9c3' },
+  gelb:      { label: 'Yellow Bag',     color: '#ca8a04', icon: '🟡', light: '#fefce8' },
+  papier:    { label: 'Paper & Card',   color: '#2563eb', icon: '📄', light: '#eff6ff' },
+};
+
+function loadDates() {
+  try { return JSON.parse(localStorage.getItem('mullkalender_dates') || '[]'); } catch { return []; }
+}
+function saveDates(arr) {
+  localStorage.setItem('mullkalender_dates', JSON.stringify(arr));
+}
+function loadWaNumber() { return localStorage.getItem('mullkalender_wa') || ''; }
+function saveWaNumber() {
+  const v = document.getElementById('wa-number').value.trim();
+  localStorage.setItem('mullkalender_wa', v);
+}
+
+// ===== DATE UTILS =====
+const today = new Date(); today.setHours(0,0,0,0);
+function toYMD(d) { return d.toISOString().split('T')[0]; }
+function parseDMY(s) {
+  const [d,m,y] = s.split('.');
+  return new Date(parseInt(y), parseInt(m)-1, parseInt(d));
+}
+function diffDays(dateStr) {
+  const d = new Date(dateStr); d.setHours(0,0,0,0);
+  return Math.round((d - today) / 86400000);
+}
+function formatEN(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-GB', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+}
+function formatShortEN(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+// ===== INIT =====
+let calYear, calMonth;
+window.addEventListener('load', () => {
+  const now = new Date();
+  calYear = now.getFullYear(); calMonth = now.getMonth();
+  document.getElementById('today-label').textContent = 'Today, ' + today.toLocaleDateString('en-GB', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  document.getElementById('add-date').value = toYMD(today);
+  document.getElementById('wa-number').value = loadWaNumber();
+  preloadPinneberg();
+  render();
+  scheduleNotifications();
+});
+
+function render() {
+  renderBinCards();
+  renderCalendar();
+  renderUpcoming();
+  renderBanners();
+}
+
+// ===== BIN CARDS =====
+function renderBinCards() {
+  const dates = loadDates().filter(d => diffDays(d.date) >= 0).sort((a,b) => a.date.localeCompare(b.date));
+  const container = document.getElementById('bin-cards');
+  container.innerHTML = '';
+  for (const type of Object.keys(BIN_CONFIG)) {
+    const cfg = BIN_CONFIG[type];
+    const next = dates.find(d => d.type === type);
+    const days = next ? diffDays(next.date) : null;
+    let cardClass = 'bin-card';
+    if (days === 0) cardClass += ' today-card';
+    else if (days === 1) cardClass += ' urgent';
+    const card = document.createElement('div');
+    card.className = cardClass;
+    card.innerHTML = `
+      <div class="stripe" style="background:${cfg.color}"></div>
+      <div class="bin-icon">${cfg.icon}</div>
+      <div class="bin-name">${cfg.label}</div>
+      ${next
+        ? `<div class="days-count">${days === 0 ? '🎯' : days === 1 ? '⚠️' : days}</div>
+           <div class="days-label">${days === 0 ? 'Today!' : days === 1 ? 'Tomorrow!' : 'days away'}</div>
+           <div class="next-date" style="color:${cfg.color}">${formatShortEN(next.date)}</div>`
+        : `<div class="days-count" style="color:#cbd5e1">—</div>
+           <div class="days-label">No date set</div>`
+      }
+    `;
+    container.appendChild(card);
+  }
+}
+
+// ===== BANNERS =====
+function renderBanners() {
+  const dates = loadDates();
+  const container = document.getElementById('banners');
+  container.innerHTML = '';
+  const todayStr = toYMD(today);
+  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1);
+  const tomorrowStr = toYMD(tomorrow);
+
+  const todayBins = dates.filter(d => d.date === todayStr).map(d => BIN_CONFIG[d.type].label);
+  const tmrwBins  = dates.filter(d => d.date === tomorrowStr).map(d => BIN_CONFIG[d.type].label);
+
+  if (todayBins.length) {
+    container.innerHTML += `
+      <div class="banner today2">
+        <div class="banner-text">🟢 <strong>Today's collection:</strong> ${todayBins.join(', ')}</div>
+        <div class="banner-actions">
+          <button class="btn btn-green btn-sm" onclick="sendWhatsApp('today')">💬 Remind</button>
+        </div>
+      </div>`;
+  }
+  if (tmrwBins.length) {
+    container.innerHTML += `
+      <div class="banner tomorrow">
+        <div class="banner-text">⚠️ <strong>Tomorrow's collection:</strong> ${tmrwBins.join(', ')} — put the bin out tonight!</div>
+        <div class="banner-actions">
+          <button class="btn btn-green btn-sm" onclick="sendWhatsApp('tomorrow')">💬 Remind</button>
+        </div>
+      </div>`;
+  }
+}
+
+// ===== CALENDAR =====
+const DAYS_EN = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const MONTHS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function renderCalendar() {
+  document.getElementById('month-label').textContent = MONTHS_EN[calMonth] + ' ' + calYear;
+
+  const hdr = document.getElementById('cal-headers');
+  hdr.innerHTML = DAYS_EN.map(d => `<div class="cal-day-header">${d}</div>`).join('');
+
+  const dates = loadDates();
+  const dayMap = {};
+  dates.forEach(d => { if (!dayMap[d.date]) dayMap[d.date] = []; dayMap[d.date].push(d.type); });
+
+  const firstDay = new Date(calYear, calMonth, 1);
+  let startDow = firstDay.getDay();
+  startDow = startDow === 0 ? 6 : startDow - 1; // Monday-first
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const todayStr = toYMD(today);
+
+  const body = document.getElementById('cal-body');
+  body.innerHTML = '';
+
+  for (let i = 0; i < startDow; i++) {
+    const cell = document.createElement('div'); cell.className = 'cal-cell empty'; body.appendChild(cell);
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const isToday = dateStr === todayStr;
+    const cell = document.createElement('div');
+    cell.className = 'cal-cell' + (isToday ? ' today' : '');
+
+    const numDiv = document.createElement('div');
+    numDiv.className = 'cal-num';
+    numDiv.textContent = day;
+    cell.appendChild(numDiv);
+
+    if (dayMap[dateStr]) {
+      const dotsDiv = document.createElement('div'); dotsDiv.className = 'cal-dots';
+      dayMap[dateStr].forEach(type => {
+        const cfg = BIN_CONFIG[type];
+        const wrap = document.createElement('div'); wrap.className = 'tooltip-wrap';
+        const dot = document.createElement('div');
+        dot.className = 'cal-dot';
+        dot.style.background = cfg.color;
+        dot.title = cfg.label;
+        const tip = document.createElement('div'); tip.className = 'tooltip'; tip.textContent = cfg.label;
+        wrap.appendChild(dot); wrap.appendChild(tip);
+        dotsDiv.appendChild(wrap);
+      });
+      cell.appendChild(dotsDiv);
+    }
+    body.appendChild(cell);
+  }
+}
+
+function prevMonth() { calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; } renderCalendar(); }
+function nextMonth() { calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; } renderCalendar(); }
+
+// ===== UPCOMING LIST =====
+function renderUpcoming() {
+  const dates = loadDates()
+    .filter(d => diffDays(d.date) >= 0)
+    .sort((a,b) => a.date.localeCompare(b.date))
+    .slice(0, 30);
+
+  const container = document.getElementById('upcoming-list');
+  if (!dates.length) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">📭</div>No dates added yet.<br>Add collection dates in the "Add Dates" tab.</div>`;
+    return;
+  }
+
+  container.innerHTML = '';
+  dates.forEach((d) => {
+    const cfg = BIN_CONFIG[d.type];
+    const days = diffDays(d.date);
+    let badgeClass = 'badge', badgeText = `in ${days} days`;
+    if (days === 0)      { badgeClass += ' tday'; badgeText = 'Today!'; }
+    else if (days === 1) { badgeClass += ' tmrw'; badgeText = 'Tomorrow!'; }
+    else if (days <= 3)  { badgeClass += ' soon'; badgeText = `in ${days} days`; }
+
+    const item = document.createElement('div'); item.className = 'upcoming-item';
+    item.innerHTML = `
+      <div class="dot" style="background:${cfg.color}"></div>
+      <div class="info">
+        <div class="name">${cfg.icon} ${cfg.label}</div>
+        <div class="date">${formatEN(d.date)}</div>
+      </div>
+      <span class="${badgeClass}">${badgeText}</span>
+      <button class="del-btn" onclick="deleteDate('${d.date}','${d.type}')" title="Remove">✕</button>
+    `;
+    container.appendChild(item);
+  });
+}
+
+// ===== ADD / DELETE =====
+function addSingle() {
+  const type = document.getElementById('add-type').value;
+  const date = document.getElementById('add-date').value;
+  if (!date) { alert('Please select a date.'); return; }
+  const dates = loadDates();
+  if (dates.find(d => d.date === date && d.type === type)) { alert('This date is already in the calendar.'); return; }
+  dates.push({ date, type });
+  saveDates(dates);
+  render();
+  switchTab('calendar');
+}
+
+function deleteDate(date, type) {
+  const dates = loadDates().filter(d => !(d.date === date && d.type === type));
+  saveDates(dates);
+  render();
+}
+
+function clearAll() {
+  if (confirm('Are you sure you want to delete all dates?')) { saveDates([]); render(); }
+}
+
+// ===== BULK IMPORT =====
+function bulkImport() {
+  const raw = document.getElementById('bulk-input').value.trim();
+  if (!raw) return;
+  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  const existing = loadDates();
+  let added = 0, skipped = 0;
+  const validTypes = Object.keys(BIN_CONFIG);
+
+  lines.forEach(line => {
+    const parts = line.split(/\s+/);
+    if (parts.length < 2) { skipped++; return; }
+    const [dateStr, type] = parts;
+    if (!validTypes.includes(type)) { skipped++; return; }
+    let date;
+    if (dateStr.includes('.')) {
+      const d = parseDMY(dateStr);
+      if (isNaN(d)) { skipped++; return; }
+      date = toYMD(d);
+    } else {
+      date = dateStr;
+    }
+    if (existing.find(d => d.date === date && d.type === type)) { skipped++; return; }
+    existing.push({ date, type });
+    added++;
+  });
+
+  saveDates(existing);
+  render();
+  const msg = document.getElementById('import-msg');
+  msg.style.color = added > 0 ? '#16a34a' : '#dc2626';
+  msg.textContent = `✓ ${added} date(s) added${skipped ? `, ${skipped} skipped` : ''}.`;
+  if (added > 0) document.getElementById('bulk-input').value = '';
+}
+
+function loadSampleData() {
+  const year = new Date().getFullYear();
+  document.getElementById('bulk-input').value =
+`15.01.${year} restmuell
+29.01.${year} restmuell
+12.02.${year} restmuell
+08.01.${year} bio
+22.01.${year} bio
+05.02.${year} bio
+08.01.${year} gelb
+05.02.${year} gelb
+10.01.${year} papier
+07.02.${year} papier`;
+}
+
+// ===== WHATSAPP =====
+function sendWhatsApp(mode) {
+  const dates = loadDates();
+  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1);
+  const tomorrowStr = toYMD(tomorrow);
+  const todayStr = toYMD(today);
+
+  let msg = '';
+  if (mode === 'tomorrow') {
+    const bins = dates.filter(d => d.date === tomorrowStr).map(d => BIN_CONFIG[d.type]);
+    if (!bins.length) { alert('No collections scheduled for tomorrow.'); return; }
+    msg = `🗑️ *Bin Reminder!*\n\nPlease put the bin out tonight — collection is tomorrow:\n\n`
+        + bins.map(b => `${b.icon} ${b.label}`).join('\n')
+        + `\n\n📅 Collection: ${formatShortEN(tomorrowStr)}`;
+  } else if (mode === 'today') {
+    const bins = dates.filter(d => d.date === todayStr).map(d => BIN_CONFIG[d.type]);
+    msg = `🗑️ *Bin collection is today!*\n\n`
+        + bins.map(b => `${b.icon} ${b.label}`).join('\n')
+        + `\n\n📅 ${formatShortEN(todayStr)}`;
+  } else {
+    const upcoming = dates.filter(d => diffDays(d.date) >= 0).sort((a,b) => a.date.localeCompare(b.date)).slice(0,4);
+    if (!upcoming.length) { alert('No upcoming collections found.'); return; }
+    msg = `🗑️ *Upcoming bin collections:*\n\n`;
+    upcoming.forEach(d => {
+      const cfg = BIN_CONFIG[d.type];
+      const days = diffDays(d.date);
+      msg += `${cfg.icon} ${cfg.label} – ${formatShortEN(d.date)}${days===0?' *(Today!)*':days===1?' *(Tomorrow!)*':''}\n`;
+    });
+  }
+
+  const waNum = loadWaNumber().replace(/\s+/g,'');
+  const encoded = encodeURIComponent(msg);
+  const url = waNum ? `https://wa.me/${waNum}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
+  window.open(url, '_blank');
+}
+
+// ===== BROWSER NOTIFICATIONS =====
+function requestNotifPermission() {
+  if (!('Notification' in window)) { alert('Your browser does not support notifications.'); return; }
+  Notification.requestPermission().then(p => {
+    if (p === 'granted') {
+      alert('✓ Notifications enabled! Keep this page open and you will be reminded the evening before a collection.');
+      scheduleNotifications();
+    } else {
+      alert('Notifications were denied. Please enable them in your browser settings.');
+    }
+  });
+}
+
+function scheduleNotifications() {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+  const dates = loadDates();
+  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate()+1);
+  const tomorrowStr = toYMD(tomorrow);
+  const bins = dates.filter(d => d.date === tomorrowStr);
+  if (!bins.length) return;
+
+  // Schedule for 8 PM tonight
+  const notifTime = new Date(today);
+  notifTime.setHours(20, 0, 0, 0);
+  const msUntil = notifTime - Date.now();
+  if (msUntil > 0) {
+    setTimeout(() => {
+      const names = bins.map(b => BIN_CONFIG[b.type].label).join(', ');
+      new Notification('🗑️ Put the bin out tonight!', {
+        body: `Tomorrow's collection: ${names}`,
+        icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🗑️</text></svg>'
+      });
+    }, msUntil);
+  } else if (msUntil > -3600000) {
+    const names = bins.map(b => BIN_CONFIG[b.type].label).join(', ');
+    new Notification('🗑️ Put the bin out tonight!', {
+      body: `Tomorrow's collection: ${names}`,
+    });
+  }
+}
+
+// ===== PRE-LOAD DATES FROM ABFUHRPLAN 2026 PINNEBERG =====
+// Extracted from the printed calendar (circled dates)
+// ⚠️ Please verify against your paper — some dates near holidays may shift by 1 day
+const PINNEBERG_2026 = [
+  // --- General Waste (grey) — every 14 days ---
+  {date:'2026-01-14',type:'restmuell'},{date:'2026-01-28',type:'restmuell'},
+  {date:'2026-02-11',type:'restmuell'},{date:'2026-02-25',type:'restmuell'},
+  {date:'2026-03-11',type:'restmuell'},{date:'2026-03-25',type:'restmuell'},
+  {date:'2026-04-08',type:'restmuell'},{date:'2026-04-22',type:'restmuell'},
+  {date:'2026-05-06',type:'restmuell'},{date:'2026-05-20',type:'restmuell'},
+  {date:'2026-06-03',type:'restmuell'},{date:'2026-06-17',type:'restmuell'},
+  // --- Organic Waste (brown) — every 14 days ---
+  {date:'2026-01-05',type:'bio'},{date:'2026-01-19',type:'bio'},
+  {date:'2026-02-02',type:'bio'},{date:'2026-02-16',type:'bio'},
+  {date:'2026-03-02',type:'bio'},{date:'2026-03-16',type:'bio'},{date:'2026-03-30',type:'bio'},
+  {date:'2026-04-13',type:'bio'},{date:'2026-04-27',type:'bio'},
+  {date:'2026-05-11',type:'bio'},{date:'2026-05-25',type:'bio'},
+  {date:'2026-06-08',type:'bio'},{date:'2026-06-22',type:'bio'},
+  // --- Yellow Bag/Bin — every 4 weeks ---
+  {date:'2026-01-05',type:'gelb'},
+  {date:'2026-02-02',type:'gelb'},
+  {date:'2026-03-02',type:'gelb'},
+  {date:'2026-03-30',type:'gelb'},
+  {date:'2026-04-27',type:'gelb'},
+  {date:'2026-05-25',type:'gelb'},
+  {date:'2026-06-22',type:'gelb'},
+  // --- Paper & Card (blue) — every 4 weeks ---
+  {date:'2026-01-21',type:'papier'},
+  {date:'2026-02-18',type:'papier'},
+  {date:'2026-03-18',type:'papier'},
+  {date:'2026-04-15',type:'papier'},
+  {date:'2026-05-13',type:'papier'},
+  {date:'2026-06-10',type:'papier'},
+];
+
+function preloadPinneberg() {
+  const existing = loadDates();
+  if (existing.length > 0) return; // don't overwrite if user already has data
+  saveDates(PINNEBERG_2026);
+}
+
+// ===== AI CALENDAR SCAN =====
+let _scanFile = null;
+let _scannedDates = [];
+
+function onScanDragOver(e) {
+  e.preventDefault();
+  document.getElementById('scan-dropzone').classList.add('dragover');
+}
+function onScanDragLeave() {
+  document.getElementById('scan-dropzone').classList.remove('dragover');
+}
+function onScanDrop(e) {
+  e.preventDefault();
+  document.getElementById('scan-dropzone').classList.remove('dragover');
+  if (e.dataTransfer.files[0]) onScanFileSelected(e.dataTransfer.files[0]);
+}
+function onScanFileSelected(file) {
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { alert('File too large — please use a file under 10 MB.'); return; }
+  _scanFile = file;
+  document.getElementById('scan-chip-name').textContent = file.name;
+  document.getElementById('scan-chip').style.display = 'flex';
+  document.getElementById('scan-dropzone').style.display = 'none';
+  document.getElementById('scan-btn').disabled = false;
+  document.getElementById('scan-status').textContent = '';
+  document.getElementById('scan-preview').style.display = 'none';
+  document.getElementById('scan-import-msg').textContent = '';
+}
+function clearScanFile() {
+  _scanFile = null;
+  document.getElementById('scan-chip').style.display = 'none';
+  document.getElementById('scan-dropzone').style.display = '';
+  document.getElementById('scan-btn').disabled = true;
+  document.getElementById('scan-file-input').value = '';
+  document.getElementById('scan-status').textContent = '';
+  document.getElementById('scan-preview').style.display = 'none';
+}
+function cancelScan() {
+  document.getElementById('scan-preview').style.display = 'none';
+}
+
+async function startScan() {
+  if (!_scanFile) return;
+  const btn = document.getElementById('scan-btn');
+  const status = document.getElementById('scan-status');
+  btn.disabled = true;
+  document.getElementById('scan-preview').style.display = 'none';
+  document.getElementById('scan-import-msg').textContent = '';
+  status.innerHTML = '<span class="spinner"></span> Preparing file…';
+
+  try {
+    const ext = _scanFile.name.split('.').pop().toLowerCase();
+    let payload;
+
+    if (ext === 'docx') {
+      status.innerHTML = '<span class="spinner"></span> Reading document…';
+      if (!window.mammoth) await _loadScript('https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js');
+      const ab = await _readArrayBuffer(_scanFile);
+      const { value: text } = await mammoth.extractRawText({ arrayBuffer: ab });
+      payload = { type: 'text', content: text };
+    } else if (ext === 'pdf') {
+      const b64 = await _readDataURL(_scanFile);
+      payload = { type: 'pdf', content: b64 };
+    } else {
+      const b64 = await _readDataURL(_scanFile);
+      const resized = await _resizeImage(b64, _scanFile.type);
+      payload = { type: 'image', content: resized };
+    }
+
+    status.innerHTML = '<span class="spinner"></span> AI is reading the calendar…';
+
+    const resp = await fetch('/api/scan-calendar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const json = await resp.json();
+    if (!resp.ok) throw new Error(json.error || `Server error ${resp.status}`);
+
+    const dates = json.dates || [];
+    if (!dates.length) {
+      status.innerHTML = '⚠️ No dates found. Try a clearer photo or a different file.';
+      btn.disabled = false;
+      return;
+    }
+    _scannedDates = dates;
+    status.innerHTML = '';
+    _showScanPreview(dates);
+  } catch (err) {
+    status.innerHTML = `<span style="color:#ef4444">✕ ${err.message}</span>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function _showScanPreview(dates) {
+  const existing = loadDates();
+  document.getElementById('scan-count').textContent = dates.length;
+  const tbody = document.getElementById('scan-tbody');
+  tbody.innerHTML = '';
+  dates.forEach((d, i) => {
+    const cfg = BIN_CONFIG[d.type];
+    const days = diffDays(d.date);
+    const isDupe = existing.some(e => e.date === d.date && e.type === d.type);
+    const tr = document.createElement('tr');
+    if (isDupe) tr.style.opacity = '0.5';
+    tr.innerHTML = `
+      <td style="padding-left:14px;">
+        <input type="checkbox" class="scan-row-cb" data-i="${i}" ${isDupe ? '' : 'checked'}>
+      </td>
+      <td>${formatShortEN(d.date)}</td>
+      <td>
+        <span class="type-badge" style="background:${cfg.light};color:${cfg.color};border:1px solid ${cfg.color}3a;">
+          ${cfg.icon} ${cfg.label}
+        </span>
+        ${isDupe ? '<span style="font-size:0.7rem;color:var(--muted);margin-left:4px;">already added</span>' : ''}
+      </td>
+      <td style="color:var(--muted);font-size:0.78rem;">${
+        days < 0 ? 'past' : days === 0 ? '🟢 today' : days === 1 ? '⚠️ tomorrow' : days + ' d'
+      }</td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('scan-select-all').checked = true;
+  document.getElementById('scan-preview').style.display = 'block';
+  setTimeout(() => document.getElementById('scan-preview').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 80);
+}
+
+function toggleAllScanRows(v) {
+  document.querySelectorAll('.scan-row-cb').forEach(cb => { cb.checked = v; });
+}
+
+function confirmScanImport() {
+  const selected = [...document.querySelectorAll('.scan-row-cb:checked')].map(cb => _scannedDates[+cb.dataset.i]);
+  if (!selected.length) {
+    document.getElementById('scan-import-msg').style.color = '#dc2626';
+    document.getElementById('scan-import-msg').textContent = 'Select at least one date.';
+    return;
+  }
+  const existing = loadDates();
+  let added = 0, skipped = 0;
+  selected.forEach(d => {
+    if (existing.some(e => e.date === d.date && e.type === d.type)) { skipped++; return; }
+    existing.push(d); added++;
+  });
+  saveDates(existing);
+  render();
+  const msg = document.getElementById('scan-import-msg');
+  msg.style.color = '#16a34a';
+  msg.textContent = `✓ ${added} date(s) imported${skipped ? `, ${skipped} skipped` : ''}.`;
+  if (added > 0) setTimeout(() => { cancelScan(); clearScanFile(); switchTab('calendar'); }, 1600);
+}
+
+// — File utilities —
+function _readDataURL(file) {
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
+}
+function _readArrayBuffer(file) {
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsArrayBuffer(file); });
+}
+function _resizeImage(dataUrl, mime, max = 1920) {
+  return new Promise(res => {
+    const img = new Image();
+    img.onload = () => {
+      if (img.width <= max && img.height <= max) { res(dataUrl); return; }
+      const s = max / Math.max(img.width, img.height);
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      res(c.toDataURL(mime || 'image/jpeg', 0.88));
+    };
+    img.src = dataUrl;
+  });
+}
+function _loadScript(src) {
+  return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+}
+
+// ===== TABS =====
+function switchTab(name) {
+  const tabNames = ['calendar','schedule','add'];
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', tabNames[i] === name);
+  });
+  document.querySelectorAll('.tab-content').forEach(c => {
+    c.classList.toggle('active', c.id === 'tab-' + name);
+  });
+}
+</script>
+</body>
+</html>
