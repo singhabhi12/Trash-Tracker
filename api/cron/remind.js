@@ -1,4 +1,8 @@
-const { kv } = require('@vercel/kv');
+const { Redis } = require('@upstash/redis');
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
 const twilio = require('twilio');
 
 const BIN_LABELS = {
@@ -27,11 +31,11 @@ module.exports = async function handler(req, res) {
   const from = process.env.TWILIO_WHATSAPP_FROM;
   const tomorrowStr = getTomorrow();
 
-  const users = (await kv.smembers('registered_users')) || [];
+  const users = (await redis.smembers('registered_users')) || [];
   let sent = 0, skipped = 0, errors = 0;
 
   for (const phone of users) {
-    const user = await kv.get(`user:${phone}`);
+    const user = await redis.get(`user:${phone}`);
     if (!user) continue;
 
     const bins = (user.dates || []).filter(d => d.date === tomorrowStr);

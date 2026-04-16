@@ -1,4 +1,8 @@
-const { kv } = require('@vercel/kv');
+const { Redis } = require('@upstash/redis');
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -16,16 +20,16 @@ module.exports = async function handler(req, res) {
   }
 
   if (action === 'unregister') {
-    await kv.del(`user:${normalized}`);
-    await kv.srem('registered_users', normalized);
+    await redis.del(`user:${normalized}`);
+    await redis.srem('registered_users', normalized);
     return res.status(200).json({ success: true });
   }
 
-  await kv.set(`user:${normalized}`, {
+  await redis.set(`user:${normalized}`, {
     phone: normalized,
     dates: dates || [],
     updatedAt: new Date().toISOString(),
   });
-  await kv.sadd('registered_users', normalized);
+  await redis.sadd('registered_users', normalized);
   return res.status(200).json({ success: true });
 };
