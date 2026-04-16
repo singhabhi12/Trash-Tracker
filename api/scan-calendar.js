@@ -1,5 +1,4 @@
 const { OpenAI } = require('openai');
-const pdfParse = require('pdf-parse');
 
 const PROMPT = `You are an expert at reading waste collection calendars (Abfuhrkalender / Müllkalender).
 
@@ -52,6 +51,7 @@ module.exports = async function handler(req, res) {
     } else if (type === 'pdf') {
       let text;
       try {
+        const pdfParse = require('pdf-parse');
         const base64Data = content.replace(/^data:[^;]+;base64,/, '');
         const buf = Buffer.from(base64Data, 'base64');
         const parsed = await pdfParse(buf);

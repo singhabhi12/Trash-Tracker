@@ -961,7 +961,10 @@ async function startScan() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
-    const json = await resp.json();
+    let json;
+    try { json = await resp.json(); } catch {
+      throw new Error(`Server error (${resp.status}) — check your OPENAI_API_KEY in Vercel settings.`);
+    }
     if (!resp.ok) throw new Error(json.error || `Server error ${resp.status}`);
 
     const dates = json.dates || [];
